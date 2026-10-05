@@ -1,0 +1,53 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Metodo de otimizacao erra de um jeito silencioso: ele sempre devolve um
+      # ponto, e um ponto quase bom tem a mesma cara de um ponto bom. Por isso
+      # todo problema aqui vem com o MINIMO CONHECIDO junto, e e ele que julga.
+      #
+      # E gradiente zero nao basta como juiz, porque ponto de sela tambem tem
+      # gradiente zero: os testes conferem a vizinhanca inteira de cada minimo
+      # declarado, nos dois sentidos de cada eixo.
+      - name: testes
+        run: dotnet test testes/Otimizacao.Testes/Otimizacao.Testes.csproj -c Release --nologo -v q
+
+      - name: o gradiente a mao contra a diferenca finita
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- gradiente
+
+      - name: o maior passo que ainda converge
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- passo
+
+      # A medida central: a descida de gradiente cresce com k, o momento com a
+      # RAIZ de k, e o Newton nao cresce. E a razao medida bate com (k-1)/(k+1)
+      # na sexta casa, sem que o codigo da descida conheca k.
+      - name: o custo do condicionamento
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- condicionamento
+
+      - name: o momento, medido em gradientes
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- momento
+
+      - name: Newton e os digitos que dobram
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- newton
+
+      - name: o preco de nao ter derivada
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- semderivada
